@@ -35,7 +35,7 @@ label{display:block;margin:8px 0 3px;color:var(--mu);font-size:13px}
 .st{background:var(--bg);border-radius:10px;padding:12px}.st b{font-size:26px;display:block}
 .tw{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{padding:7px 9px;border-bottom:1px solid var(--bd);text-align:left;font-size:14px;white-space:nowrap}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}.tabs button{background:var(--card);color:var(--tx);border:1px solid var(--bd);white-space:nowrap}.tabs .on{background:var(--pr);color:#fff}
-.msg{padding:10px;border-radius:8px;margin:8px 0}.ok{background:#16a34a22;color:var(--ok)}.er{background:#dc262622;color:var(--er)}
+.msg{white-space:pre-line;padding:10px;border-radius:8px;margin:8px 0}.ok{background:#16a34a22;color:var(--ok)}.er{background:#dc262622;color:var(--er)}
 video{width:100%;max-width:340px;border-radius:12px;background:#000;transform:scaleX(-1)}
 .org{padding:14px 8px;text-align:center;background:var(--bg);border:1px solid var(--bd);color:var(--tx);font-weight:600}
 .card{display:inline-block;width:240px;border:1px solid #000;border-radius:8px;padding:8px;margin:6px;text-align:center;color:#000;background:#fff;vertical-align:top}
@@ -52,6 +52,9 @@ video{width:100%;max-width:340px;border-radius:12px;background:#000;transform:sc
 const ORGS=["MPK","OSIS","PIK-R","ROHIS","ROHIN","ROKRIS","ROKAT","DIKSI","ENGLISH CLUB","KIR","MUNSSAGA","OLIMPIADE","PASKIB","PKS","PMR","PRAMUKA","ROBOTIK","SNIKERS","SULAM TAPIS"];
 const COL=["#e6194b","#3cb44b","#4363d8","#f58231","#911eb4","#0aa5b5","#f032e6","#7a9a01","#b8860b","#008080","#9a6324","#800000","#808000","#000075","#e07b9a","#2f9e7b","#ff7f50","#6a5acd","#20a0d0"];
 const KEY="absen_ekskul_v1";
+const JADWAL=[["Senin","16.00 – 16.30",1,960,990],["Selasa","16.00 – 16.30",2,960,990],["Rabu","13.00 – 13.30",3,780,810],["Kamis","16.00 – 16.30",4,960,990],["Jumat","15.30 – 16.00",5,930,960]];
+const jadwalTxt=()=>JADWAL.map(j=>j[0]+", "+j[1]+" WIB").join("\n");
+function jamOk(){const p=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Jakarta",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date()),g=t=>p.find(x=>x.type===t).value,d={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[g("weekday")],m=(+g("hour")%24)*60+(+g("minute")),j=JADWAL.find(x=>x[2]==d);return !!j&&m>=j[3]&&m<=j[4]}
 let DB={students:[],att:[],set:{sekolah:"Absen Ekstrakurikuler",kepsek:"",nipKepsek:"",pembina:"",nipPembina:"",logo:"",lat:0,lng:0,rad:120}};
 let USER="",PASS="";
 const API_BASE=location.hostname.endsWith("github.io")?"https://absen-intra-ekstra.vercel.app":"";
@@ -99,7 +102,7 @@ async function loginS(){try{S.me=await api("/api/student",{action:"login",id:$("
 async function loginA(){USER=$("#u").value;PASS=$("#p").value;try{await ld();go("admin","dash")}catch(e){PASS="";S.msg='<div class="msg er">'+esc(e.message)+'</div>';render()}}
 function studentV(){const s=S.me;
  app.innerHTML=`<div class="r"><h3 style="flex:1">Halo, ${esc(s.nama)} (${esc(s.kelas)})</h3><button class="g" onclick="S.me=null;go('home')">Keluar</button></div>
- <div class="c"><h3>Absen Ekstrakurikuler</h3>${S.org?`<p>Organisasi: <b>${S.org}</b> <button class="g" onclick="stopCam();S.org=null;S.msg='';render()">Ganti</button></p>
+ <div class="c"><h3>Absen Ekstrakurikuler</h3><div class="msg ok" style="white-space:pre-line"><b>Jadwal absen (WIB):</b>\n${jadwalTxt()}</div>${S.org?`<p>Organisasi: <b>${S.org}</b> <button class="g" onclick="stopCam();S.org=null;S.msg='';render()">Ganti</button></p>
  <video id="vid" autoplay playsinline muted></video><canvas id="cv" width="96" height="96" hidden></canvas>
  <div class="r" style="margin-top:10px"><button onclick="absen()">Absen dengan Wajah</button></div>
  <p style="color:var(--mu);font-size:13px">${s.face?"Wajah akan dicocokkan dengan data wajah Anda.":"Absen pertama: wajah Anda didaftarkan sebagai data acuan."}</p><div id="st">${S.msg}</div>`
@@ -114,6 +117,7 @@ function vec(){const v=$("#vid"),c=$("#cv"),x=c.getContext("2d",{willReadFrequen
  for(let i=0;i<d.length;i+=4)a.push(.3*d[i]+.59*d[i+1]+.11*d[i+2]);const m=a.reduce((p,q)=>p+q)/a.length;return a.map(q=>q-m)}
 const corr=(a,b)=>{let s=0,x=0,y=0;for(let i=0;i<a.length;i++){s+=a[i]*b[i];x+=a[i]*a[i];y+=b[i]*b[i]}return s/Math.sqrt(x*y||1)};
 async function absen(){const s=S.me,v=$("#vid");
+ if(!jamOk())return say(esc("Anda hanya bisa absen sesuai waktu tersebut:\n"+jadwalTxt()),"er");
  if(!v.videoWidth)return say("Kamera belum siap.","er");
  say("Memeriksa lokasi...","ok");
  let pos;try{pos=await new Promise((r,j)=>navigator.geolocation.getCurrentPosition(r,j,{enableHighAccuracy:true,timeout:15000}))}catch(e){return say("Lokasi tidak bisa dibaca. Aktifkan GPS dan izinkan lokasi.","er")}
